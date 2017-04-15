@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectCodeStyleSettingsManager">
+    <option name="PER_PROJECT_SETTINGS">
+      <value>
+        <option name="FORMATTER_TAGS_ENABLED" value="true" />
+        <JSCodeStyleSettings>
+          <option name="ALIGN_OBJECT_PROPERTIES" value="1" />
+          <option name="USE_DOUBLE_QUOTES" value="false" />
+        </JSCodeStyleSettings>
+        <TypeScriptCodeStyleSettings>
+          <option name="SPACE_BEFORE_FUNCTION_LEFT_PARENTH" value="false" />
+          <option name="USE_PUBLIC_MODIFIER" value="true" />
+          <option name="ALIGN_MULTILINE_VAR_DECLARATION" value="true" />
+          <option name="USE_DOUBLE_QUOTES" value="false" />
+          <option name="FORCE_QUOTE_STYlE" value="true" />
+          <option name="OBJECT_LITERAL_WRAP" value="1" />
+          <option name="IMPORTS_WRAP" value="0" />
+          <option name="UNION_TYPES_WRAP" value="1" />
+          <option name="IMPORT_SORT_MODULE_NAME" value="true" />
+        </TypeScriptCodeStyleSettings>
+        <codeStyleSettings language="JavaScript">
+          <option name="LINE_COMMENT_AT_FIRST_COLUMN" value="true" />
+          <option name="LINE_COMMENT_ADD_SPACE" value="false" />
+          <option name="BRACE_STYLE" value="2" />
+          <option name="METHOD_BRACE_STYLE" value="2" />
+          <option name="ELSE_ON_NEW_LINE" value="true" />
+          <option name="CATCH_ON_NEW_LINE" value="true" />
+          <option name="FINALLY_ON_NEW_LINE" value="true" />
+          <option name="ALIGN_MULTILINE_CHAINED_METHODS" value="true" />
+          <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+          <option name="ALIGN_MULTILINE_BINARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_TERNARY_OPERATION" value="true" />
+          <option name="ALIGN_MULTILINE_ARRAY_INITIALIZER_EXPRESSION" value="true" />
+          <option name="SPACE_BEFORE_METHOD_CALL_PARENTHESES" value="true" />
+          <option name="KEEP_SIMPLE_BLOCKS_IN_ONE_LINE" value="true" />
+          <indentOptions>
+            <option name="INDENT_SIZE" value="3" />
+            <option name="CONTINUATION_INDENT_SIZE" value="3" />
+            <option name="TAB_SIZE" value="3" />
+            <option name="KEEP_INDENTS_ON_EMPTY_LINES" value="true" />
+          </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="TypeScript">
+          <option name="BRACE_STYLE" value="2" />
+          <option name="CLASS_BRACE_STYLE" value="2" />
+          <option name="METHOD_BRACE_STYLE" value="2" />
+          <option name="ELSE_ON_NEW_LINE" value="true" />
+          <option name="CATCH_ON_NEW_LINE" value="true" />
+          <option name="SPACE_BEFORE_IF_PARENTHESES" value="false" />
+          <option name="SPACE_BEFORE_WHILE_PARENTHESES" value="false" />
+          <option name="SPACE_BEFORE_FOR_PARENTHESES" value="false" />
+          <option name="SPACE_BEFORE_CATCH_PARENTHESES" value="false" />
+          <option name="SPACE_BEFORE_SWITCH_PARENTHESES" value="false" />
+          <option name="KEEP_SIMPLE_BLOCKS_IN_ONE_LINE" value="true" />
+          <option name="WRAP_COMMENTS" value="true" />
+        </codeStyleSettings>
+      </value>
+    </option>
+    <option name="USE_PER_PROJECT_SETTINGS" value="true" />
+  </component>
+</project>
