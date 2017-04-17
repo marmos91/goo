@@ -27,11 +27,9 @@
   },
   "homepage": "https://github.com/marmos91/goo#readme",
   "dependencies": {
-    "underscore": "^1.8.3",
     "winston-decorator": "0.0.3"
   },
   "devDependencies": {
-    "@types/node": "^7.0.12",
-    "@types/underscore": "^1.8.0"
+    "@types/node": "^7.0.12"
   }
 }
