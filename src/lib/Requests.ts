@@ -1,7 +1,11 @@
 import Address from './Address';
+
 export enum HandshakeRequestType {REGISTRATION = 0, HOLEPUNCH}
 export enum MessageType {REGISTRATION = 0, HOLEPUNCH, PAYLOAD, HANDSHAKE, ACK}
 
+/**
+ * Interface representing an Handshake request (sent by the peer to the rendezvous server)
+ */
 export interface HandshakeRequest
 {
     type: HandshakeRequestType;

@@ -8,6 +8,7 @@ import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Re
 // region interfaces
 
 /**
+ * Interface representing all the possible Peer options regarding the rendezvous server
  * @member port {number}: (optional) specifies the port to listen onto
  * @member host {string}: (optional) specifies the hosts to filter when listening
  * @member protocol {UDP | TCP}: (optional) specifies the protocol to use for the handshake
@@ -122,7 +123,7 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
+     * Private method which initialize all the socket-related options
      * @returns {Promise<T>}
      * @private
      */
@@ -139,7 +140,7 @@ export class Peer extends EventEmitter
                 }
             });
 
-            this._socket.on('message', (message, sender) => this._receive(message, new Address(sender.address, sender.port)));
+            this._socket.on('message', (message, sender) => this._multiplex(message, new Address(sender.address, sender.port)));
 
             this._logger.debug('Socket set up');
             return resolve();
@@ -147,7 +148,7 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
+     * Private method used to register the peer to the given rendezvous server.
      * @private
      */
     private _register()
@@ -172,12 +173,12 @@ export class Peer extends EventEmitter
     // region multiplexing
 
     /**
-     *
-     * @param message
-     * @param sender
+     * Method used to multiplex all the different message that can be received by the peer.
+     * @param message {string | Buffer} The message to be multiplexed
+     * @param sender {Address} The sender
      * @private
      */
-    private _receive(message: string | Buffer, sender: Address)
+    private _multiplex(message: string | Buffer, sender: Address)
     {
         try
         {
@@ -220,9 +221,9 @@ export class Peer extends EventEmitter
     // region holepunch
 
     /**
-     *
-     * @param id
-     * @param remote
+     * Method used to holepunch a packet through the NAT
+     * @param id {string} the peer id to connect to
+     * @param remote {Address} The remote address
      * @private
      */
     private _holepunch(id: string, remote: Address)
@@ -244,9 +245,9 @@ export class Peer extends EventEmitter
     // region utilities
 
     /**
-     *
-     * @param data
-     * @param remote
+     * Utility method which wraps the low-level udp send to provide a more simple interface.
+     * @param data {string | Buffer} The data to be sent
+     * @param remote {Address} The remote address to send the data to
      * @private
      */
     private _send(data: string | Buffer, remote: Address)

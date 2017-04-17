@@ -23,8 +23,8 @@ export default class Address
     }
 
     /**
-     *
-     * @param address
+     * Method used to deserialize a previously serialized address and to return a new Address instance
+     * @param address {_address: string, _port: number, _family; string}: The serialized address to be deserialized
      * @returns {Address}
      */
     public static refresh(address: {_address: string, _port: number, _family; string})

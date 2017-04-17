@@ -8,6 +8,7 @@ import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Re
 // region interfaces
 
 /**
+ * Interface used to specify the server-related options
  * @member port {number}: (optional) specifies the port to listen onto
  * @member host {string}: (optional) specifies the hosts to filter when listening
  * @member protocol {UDP | TCP}: (optional) specifies the protocol to use for the handshake
@@ -18,6 +19,9 @@ export interface RendezvousOptions
     host?: string;
 }
 
+/**
+ * Private interface used to define a Peer on the signaling server.
+ */
 interface Peer
 {
     id: string;
@@ -27,12 +31,13 @@ interface Peer
 // endregion
 
 /**
+ * Class representing a Rendezvous server. This server is used as a signaling server to perform a NAT-traversal connection.
  * @author Marco Moschettini
  * @version 0.0.1
  * @implements EventEmitter
  * @class
  */
-export class Rendezvous extends EventEmitter
+export class Rendezvous
 {
     @logger(settings)
     private _logger: LoggerInstance;
@@ -44,7 +49,6 @@ export class Rendezvous extends EventEmitter
 
     public constructor(options?: RendezvousOptions)
     {
-        super();
         this._port = options && options.port || 4321;
         this._host = options && options.host || null;
         this._peers = [];
@@ -52,10 +56,10 @@ export class Rendezvous extends EventEmitter
         this._socket = dgram.createSocket('udp4');
         this._socket.on('error', (error) =>
         {
+            this._logger.error(error.message);
             this._socket.close();
-            this.emit('error', error);
         });
-        this._socket.on('message', (message, sender) => this._on_message(message, new Address(sender.address, sender.port)));
+        this._socket.on('message', (message, sender) => this._multiplex(message, new Address(sender.address, sender.port)));
     }
 
     // region initializing
@@ -76,13 +80,14 @@ export class Rendezvous extends EventEmitter
     // endregion
 
     // region multiplexing
+
     /**
-     *
-     * @param message
-     * @param sender
+     * Method used to multiplex the just received message to one of the specific method below.
+     * @param message {string | Buffer} The message to multiplex
+     * @param sender {Address} The address of the sender
      * @private
      */
-    private _on_message(message: string | Buffer, sender: Address)
+    private _multiplex(message: string | Buffer, sender: Address)
     {
         try
         {
@@ -116,10 +121,11 @@ export class Rendezvous extends EventEmitter
     // endregion
 
     // region peer registration
+
     /**
-     *
-     * @param request
-     * @param sender
+     * Private method used to save a peer on the server. It is continuously called as a keep-alive
+     * @param request {HandshakeRequest} The request to save.
+     * @param sender {Address} The sender of the request
      * @private
      */
     private _register_peer(request: HandshakeRequest, sender: Address)
@@ -137,10 +143,11 @@ export class Rendezvous extends EventEmitter
     // endregion
 
     // region signaling
+
     /**
-     *
-     * @param request
-     * @param sender
+     * Method used to perform an handshake between two peers behind NATs.
+     * @param request {HandshakeRequest} The handshake request.
+     * @param sender {Address} Address of the requesting peer.
      * @private
      */
     private _handshake(request: HandshakeRequest, sender: Address)
@@ -180,8 +187,9 @@ export class Rendezvous extends EventEmitter
     // endregion
 
     // region utilities
+
     /**
-     *
+     * Utility method which wraps the low-level udp send to provide a more simple interface.
      * @param data
      * @param remote
      * @private
