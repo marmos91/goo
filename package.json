@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/marmos91/goo#readme",
   "dependencies": {
+    "utp-native": "^1.5.0",
     "winston-decorator": "0.0.3"
   },
   "devDependencies": {
