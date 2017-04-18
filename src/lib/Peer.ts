@@ -1,4 +1,3 @@
-import * as dgram from 'dgram';
 import {EventEmitter} from 'events';
 import {logger, LoggerInstance} from 'winston-decorator';
 import settings from '../settings';
@@ -18,6 +17,7 @@ const utp = require('utp-native');
 export interface RendezvousOptions
 {
     rendezvous: Address;
+    initiator?: boolean;
     port?: number;
     host?: string;
     retry?: number;
@@ -40,6 +40,7 @@ export class Peer extends EventEmitter
     private _id: string;
     private _host: string;
     private _port: number;
+    private _initiator: boolean;
 
     private _rendezvous: Address;
     private _remote: {
@@ -47,7 +48,7 @@ export class Peer extends EventEmitter
         endpoint: Address
     };
 
-    private _socket: dgram.Socket;
+    private _socket: any;
     private _retry_interval: number;
     private _intervals: {
         handshake: NodeJS.Timer,
@@ -62,6 +63,7 @@ export class Peer extends EventEmitter
         super();
         this._id = id;
         this._rendezvous = options.rendezvous;
+        this._initiator = options && options.initiator || false;
         this._host = options && options.host || null;
         this._port = options && options.port || null;
         this._retry_interval = options && options.retry || 1000;
@@ -108,7 +110,7 @@ export class Peer extends EventEmitter
     {
         return new Promise((resolve) =>
         {
-            this._socket.bind(this._port, this._host, async () =>
+            this._socket.listen(this._port, this._host, async () =>
             {
                 // Save socket info
                 this._host = this._socket.address().address;
@@ -215,7 +217,42 @@ export class Peer extends EventEmitter
                         clearInterval(this._intervals.punch);
 
                     this._logger.profile('holepunch');
-                    this.emit('connection', this._socket);
+
+                    this._socket.on('connection', (connection) =>
+                    {
+                        let callback = (msg) =>
+                        {
+                            connection.write('ack');
+                            this.emit('connection', connection);
+                        };
+                        connection.once('data', callback);
+                    });
+
+                    if(this._initiator)
+                    {
+                        this._logger.verbose('I am the initiator. Connecting with UTP...');
+
+                        let interval = setInterval(() =>
+                        {
+                            this._logger.debug('Trying connecting...');
+                            let connection = this._socket.connect(sender.port, sender.address);
+
+                            connection.write('punch');
+                            let callback = (msg) =>
+                            {
+                                if(msg.toString() === 'ack')
+                                {
+                                    clearInterval(interval);
+                                    this.emit('connection', connection);
+                                }
+                            };
+                            connection.once('data', callback);
+                            connection.read(0);
+                        }, this._retry_interval);
+                    }
+                    else
+                        this._logger.verbose('I am the receiver. Listening with UTP...');
+
                     break;
                 }
                 default:

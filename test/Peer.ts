@@ -7,8 +7,14 @@ let peer = new Peer('peer', {
 
 peer.listen().then(() =>
 {
-    peer.on('connection', () =>
+    peer.on('connection', (connection) =>
     {
         console.log('Connection succeeded!');
+        connection.on('data', (data) =>
+        {
+            console.log('New message received');
+            console.log(data.toString());
+            connection.write('Hello too!');
+        });
     });
 });
