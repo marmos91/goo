@@ -4,6 +4,7 @@ import {logger, LoggerInstance} from 'winston-decorator';
 import settings from '../settings';
 import Address from './Address';
 import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Requests';
+const utp = require('utp-native');
 
 // region interfaces
 
@@ -70,7 +71,7 @@ export class Peer extends EventEmitter
             punch: null
         };
 
-        this._socket = dgram.createSocket('udp4');
+        this._socket = utp();
     }
 
     // region public methods
