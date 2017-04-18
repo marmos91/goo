@@ -195,13 +195,26 @@ export class Peer extends EventEmitter
                     if(this._intervals.registration)
                         clearInterval(this._intervals.registration);
 
-                    this._logger.debug('Handshake request/response received. Starting holepunch!');
+                    this._logger.verbose('Handshake request/response received. Starting holepunch!');
+
+                    this._logger.profile('holepunch', 'Holepunch succeeded');
                     this._holepunch(data.id, Address.refresh(data.endpoint as any));
                     break;
                 }
                 case MessageType.HOLEPUNCH:
                 {
-                    this._logger.debug('Received holepunch packet from', sender);
+                    this._logger.debug('Received holepunch packet from', sender, '. Sending ACK back!');
+                    this._send(Buffer.from(JSON.stringify({type: MessageType.ACK})), sender);
+                    break;
+                }
+                case MessageType.ACK:
+                {
+                    this._logger.debug('Received ack from', sender, 'Stopping timer');
+                    if(this._intervals.punch)
+                        clearInterval(this._intervals.punch);
+
+                    this._logger.profile('holepunch');
+                    this.emit('connection', this._socket);
                     break;
                 }
                 default:

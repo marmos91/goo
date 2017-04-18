@@ -31,7 +31,8 @@ interface Peer
 // endregion
 
 /**
- * Class representing a Rendezvous server. This server is used as a signaling server to perform a NAT-traversal connection.
+ * Class representing a Rendezvous server. This server is used as a signaling server to perform a NAT-traversal
+ * connection.
  * @author Marco Moschettini
  * @version 0.0.1
  * @implements EventEmitter
@@ -92,29 +93,30 @@ export class Rendezvous
         try
         {
             let request: HandshakeRequest = JSON.parse(message as string);
-            this._logger.debug('Message received', request);
 
             switch(request.type)
             {
                 case HandshakeRequestType.REGISTRATION:
                 {
+                    this._logger.verbose('Registration request received.');
                     this._register_peer(request, sender);
                     break;
                 }
                 case HandshakeRequestType.HOLEPUNCH:
                 {
+                    this._logger.verbose('Handshake request received.');
                     this._handshake(request, sender);
                     break;
                 }
                 default:
                 {
-                    this.emit('error', new Error('Unknown request received'));
+                    this._logger.error('Unknown request received');
                 }
             }
         }
         catch(error)
         {
-            this.emit('error', error);
+            this._logger.error(error);
         }
     }
 
