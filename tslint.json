@@ -10,6 +10,7 @@
     "eofline": false,
     "ordered-imports": false,
     "trailing-comma": false,
+    "interface-name": false,
     "object-literal-sort-keys": false,
     "no-trailing-whitespace": false,
     "no-var-keyword": true,
