@@ -210,7 +210,7 @@ export interface RTCPeerConnectionIceEvent extends Event
     readonly candidate: RTCIceCandidate;
 }
 
-let RTCPeerConnectionIceEvent: {
+declare let RTCPeerConnectionIceEvent: {
     prototype: RTCPeerConnectionIceEvent;
     new(type: string, eventInitDict: any): RTCPeerConnectionIceEvent;
 };
@@ -275,7 +275,7 @@ export interface RTCSessionDescription
     toJSON(): any;
 }
 
-let RTCSessionDescription: {
+declare let RTCSessionDescription: {
     prototype: RTCSessionDescription;
     new(descriptionInitDict?: any): RTCSessionDescription;
 };
