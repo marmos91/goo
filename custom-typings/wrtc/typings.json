@@ -1,0 +1,8 @@
+{
+  "name": "wrtc",
+  "version": "0.0.61",
+  "main": "wrtc.d.ts",
+  "globalDependencies": {
+    "node": "registry:env/node#6.0.0+20160622202520"
+  }
+}
