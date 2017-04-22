@@ -3,7 +3,7 @@ import {EventEmitter} from 'events';
 import {logger, LoggerInstance} from 'winston-decorator';
 import settings from '../settings';
 import Address from './Address';
-import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Requests';
+import {HandshakeRequest, HandshakeRequestType, Message, MessageType, ProtocolType} from './Requests';
 
 // region interfaces
 
@@ -17,6 +17,7 @@ export interface RendezvousOptions
 {
     port?: number;
     host?: string;
+    protocol?: ProtocolType;
 }
 
 /**
@@ -47,12 +48,16 @@ export class Rendezvous
     private _host: string;
     private _socket: dgram.Socket;
     private _peers: Peer [];
+    private _protocol: ProtocolType;
 
     public constructor(options?: RendezvousOptions)
     {
         this._port = options && options.port || 4321;
         this._host = options && options.host || null;
+        this._protocol = (typeof options !== 'undefined') ? options.protocol : ProtocolType.WEBRTC;
         this._peers = [];
+
+        this._logger.debug('Protocol chosen:', ProtocolType[this._protocol]);
 
         this._socket = dgram.createSocket('udp4');
         this._socket.on('error', (error) =>
@@ -174,8 +179,19 @@ export class Rendezvous
                 };
 
                 let receiver_message = JSON.stringify(receiver_response);
-
                 this._send(receiver_message, this._peers[request.remote_id].endpoint);
+
+                if(this._protocol === ProtocolType.UTP)
+                {
+                    let sender_response: Message = {
+                        type: MessageType.HANDSHAKE,
+                        id: request.remote_id,
+                        endpoint: this._peers[request.remote_id].endpoint
+                    };
+
+                    let sender_message = JSON.stringify(sender_response);
+                    this._send(sender_message, sender);
+                }
             }
             else
                 this._logger.error('Peer', request.remote_id, 'not yet registered');
@@ -185,7 +201,6 @@ export class Rendezvous
     /**
      *
      * @param request
-     * @param sender
      * @private
      */
     private _signal(request: HandshakeRequest)

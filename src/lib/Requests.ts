@@ -2,7 +2,8 @@ import Address from './Address';
 import {RTCIceCandidate} from 'wrtc';
 
 export enum HandshakeRequestType {REGISTRATION = 0, HOLEPUNCH, SIGNALING}
-export enum MessageType {REGISTRATION = 0, PAYLOAD, HANDSHAKE, SIGNAL}
+export enum MessageType {REGISTRATION = 0, HOLEPUNCH, PAYLOAD, HANDSHAKE, SIGNAL, ACK}
+export enum ProtocolType {UTP, WEBRTC}
 
 /**
  * Interface representing an Handshake request (sent by the peer to the rendezvous server)

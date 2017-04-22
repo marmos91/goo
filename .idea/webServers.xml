@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="1548bb73-ba1c-4f6e-a9a9-4ab1de6390b4" name="cubbit" url="http://api.cubbit.net">
+        <fileTransfer host="api.cubbit.net" port="22" rootFolder="/home/production/holepunch" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="a0eef857-040d-49a9-bf48-b6bbc7a5c90f" name="rain" url="http://rain.vg">
+        <fileTransfer host="rain.vg" port="22" rootFolder="/home/rain/goo" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

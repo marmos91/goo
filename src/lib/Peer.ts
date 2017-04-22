@@ -1,14 +1,14 @@
-import * as dgram from 'dgram';
 import {EventEmitter} from 'events';
 import * as SPeer from 'simple-peer';
 import {logger, LoggerInstance} from 'winston-decorator';
 import * as wrtc from 'wrtc';
 import settings from '../settings';
 import Address from './Address';
-import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Requests';
+import {HandshakeRequest, HandshakeRequestType, Message, MessageType, ProtocolType} from './Requests';
+const utp = require('utp-native');
 
 // region settings
-let ice_settings = {
+let default_ice_settings = {
     iceServers: [{
         url: 'stun:stun.l.google.com:19302'
     }],
@@ -30,6 +30,7 @@ export interface RendezvousOptions
 {
     rendezvous: Address;
     initiator?: boolean;
+    protocol?: ProtocolType;
     port?: number;
     host?: string;
     retry?: number;
@@ -54,6 +55,7 @@ export class Peer extends EventEmitter
     private _host: string;
     private _port: number;
     private _initiator: boolean;
+    private _protocol: ProtocolType;
 
     private _rendezvous: Address;
     private _remote: {
@@ -79,6 +81,7 @@ export class Peer extends EventEmitter
         this._id = id;
         this._rendezvous = options.rendezvous;
         this._initiator = options && options.initiator || false;
+        this._protocol = (typeof options !== 'undefined') ? options.protocol : ProtocolType.WEBRTC;
         this._host = options && options.host || null;
         this._port = options && options.port || null;
         this._retry_interval = options && options.retry || 1000;
@@ -89,10 +92,11 @@ export class Peer extends EventEmitter
             punch: null
         };
 
-        this._socket = dgram.createSocket('udp4');
+        this._logger.debug('Protocol chosen:', ProtocolType[this._protocol]);
+        this._socket = utp();
     }
 
-    // region public methods
+    // region connection factory
 
     /**
      * Method that sends the handshake request to the rendezvous server
@@ -100,8 +104,57 @@ export class Peer extends EventEmitter
      */
     public get_connection_with(remote_id: string)
     {
-        this._logger.debug('Establishing WebRTC connection with peer', remote_id);
+        this._logger.debug('Establishing connection with peer', remote_id);
 
+        switch(this._protocol)
+        {
+            case ProtocolType.UTP:
+            {
+                this._utp_setup(remote_id);
+                break;
+            }
+            case ProtocolType.WEBRTC:
+            {
+                this._rtc_setup(remote_id);
+                break;
+            }
+            default:
+            {
+                this.emit('error', new Error('Unknown protocol specified'));
+            }
+        }
+    }
+
+    /**
+     *
+     * @param remote_id
+     * @private
+     */
+    private _utp_setup(remote_id: string)
+    {
+        this._logger.debug('Setting up UTP');
+        this._intervals.handshake = setInterval(() =>
+        {
+            let data: HandshakeRequest = {
+                type: HandshakeRequestType.HOLEPUNCH,
+                peer_id: this._id,
+                remote_id
+            };
+
+            let buffered_data = Buffer.from(JSON.stringify(data));
+
+            this._send(buffered_data, this._rendezvous);
+        }, this._retry_interval);
+    }
+
+    /**
+     *
+     * @param remote_id
+     * @private
+     */
+    private _rtc_setup(remote_id: string)
+    {
+        this._logger.debug('Setting up WebRTC');
         let data: HandshakeRequest = {
             type: HandshakeRequestType.HOLEPUNCH,
             peer_id: this._id,
@@ -111,7 +164,7 @@ export class Peer extends EventEmitter
         let buffered_data = Buffer.from(JSON.stringify(data));
         this._send(buffered_data, this._rendezvous);
 
-        this._peer = new SPeer({initiator: true, wrtc, config: ice_settings, trickle: this._trickle});
+        this._peer = new SPeer({initiator: true, wrtc, config: default_ice_settings, trickle: this._trickle});
 
         this._peer.on('error', (error) => this.emit('error', error));
         this._peer.on('connect', () => this.emit('connection', this._peer));
@@ -152,7 +205,6 @@ export class Peer extends EventEmitter
                 this._logger.debug(`UDP Socket bound on ${this._host}:${this._port}`);
 
                 await this._init();
-
                 await this._register();
                 return resolve();
             });
@@ -190,6 +242,58 @@ export class Peer extends EventEmitter
      */
     private _register(): Promise<any>
     {
+        switch(this._protocol)
+        {
+            case ProtocolType.UTP:
+            {
+                return this._utp_register();
+            }
+            case ProtocolType.WEBRTC:
+            {
+                return this._rtc_register();
+            }
+            default:
+            {
+                this.emit('error', new Error('Unknown protocol specified'));
+            }
+        }
+    }
+
+    /**
+     *
+     * @returns {Promise<T>}
+     * @private
+     */
+    private _utp_register(): Promise <any>
+    {
+        return new Promise((resolve, reject) =>
+        {
+            this._intervals.registration = setInterval(() =>
+            {
+                try
+                {
+                    let request: HandshakeRequest = {type: HandshakeRequestType.REGISTRATION, peer_id: this._id};
+                    let buffer_request = Buffer.from(JSON.stringify(request));
+
+                    this._send(buffer_request, this._rendezvous);
+
+                    return resolve();
+                }
+                catch(error)
+                {
+                    this._logger.error(error);
+                }
+            }, this._retry_interval);
+        });
+    }
+
+    /**
+     *
+     * @returns {Promise<T>}
+     * @private
+     */
+    private _rtc_register(): Promise <any>
+    {
         return new Promise((resolve, reject) =>
         {
             this._logger.debug('Registering...');
@@ -224,27 +328,74 @@ export class Peer extends EventEmitter
             {
                 case MessageType.HANDSHAKE:
                 {
-                    this._logger.verbose('Handshake request received. Starting holepunch!');
-
-                    this._peer = new SPeer({initiator: false, wrtc, config: ice_settings, trickle: this._trickle});
-
-                    this._peer.on('error', (error) => this.emit('error', error));
-                    this._peer.on('connect', () => this.emit('connection', this._peer));
-
-                    this._logger.debug('Retrieving ICE candidates...');
-                    this._peer.on('signal', (ice_candidate) =>
+                    switch(this._protocol)
                     {
-                        let request: HandshakeRequest = {
-                            type: HandshakeRequestType.SIGNALING,
-                            peer_id: this._id,
-                            remote_id: data.id,
-                            signal: ice_candidate
-                        };
+                        case ProtocolType.WEBRTC:
+                        {
+                            this._rtc_handshake(data);
+                            break;
+                        }
+                        case ProtocolType.UTP:
+                        {
+                            this._utp_handshake(data);
+                            break;
+                        }
+                        default:
+                        {
+                            this.emit('error', new Error('Unknown protocol specified'));
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case MessageType.HOLEPUNCH:
+                {
+                    this._logger.debug('Received holepunch packet from', sender, '. Sending ACK back!');
+                    this._send(Buffer.from(JSON.stringify({type: MessageType.ACK})), sender);
+                    break;
+                }
+                case MessageType.ACK:
+                {
+                    this._logger.debug('Received ack from', sender, 'Stopping timer');
+                    if(this._intervals.punch)
+                        clearInterval(this._intervals.punch);
 
-                        this._logger.silly('Sending ice candidates...', ice_candidate);
-                        let signal = Buffer.from(JSON.stringify(request));
-                        this._send(signal, this._rendezvous);
+                    this._logger.profile('holepunch');
+
+                    this._socket.on('connection', (connection) =>
+                    {
+                        let callback = (msg) =>
+                        {
+                            connection.write('ack');
+                            this.emit('connection', connection);
+                        };
+                        connection.once('data', callback);
                     });
+
+                    if(this._initiator)
+                    {
+                        this._logger.verbose('I am the initiator. Connecting with UTP...');
+
+                        let interval = setInterval(() =>
+                        {
+                            this._logger.debug('Trying connecting...');
+                            let connection = this._socket.connect(sender.port, sender.address);
+
+                            connection.write('punch');
+                            let callback = (msg) =>
+                            {
+                                if(msg.toString() === 'ack')
+                                {
+                                    clearInterval(interval);
+                                    this.emit('connection', connection);
+                                }
+                            };
+                            connection.once('data', callback);
+                            connection.read(0);
+                        }, this._retry_interval);
+                    }
+                    else
+                        this._logger.verbose('I am the receiver. Listening with UTP...');
 
                     break;
                 }
@@ -264,6 +415,73 @@ export class Peer extends EventEmitter
         {
             this._logger.error(error);
         }
+    }
+
+    /**
+     *
+     * @private
+     */
+    private _rtc_handshake(data: Message)
+    {
+        this._logger.verbose('Handshake request received. Starting holepunch!');
+
+        this._peer = new SPeer({initiator: false, wrtc, config: default_ice_settings, trickle: this._trickle});
+
+        this._peer.on('error', (error) => this.emit('error', error));
+        this._peer.on('connect', () => this.emit('connection', this._peer));
+
+        this._logger.debug('Retrieving ICE candidates...');
+        this._peer.on('signal', (ice_candidate) =>
+        {
+            let request: HandshakeRequest = {
+                type: HandshakeRequestType.SIGNALING,
+                peer_id: this._id,
+                remote_id: data.id,
+                signal: ice_candidate
+            };
+
+            this._logger.silly('Sending ice candidates...', ice_candidate);
+            let signal = Buffer.from(JSON.stringify(request));
+            this._send(signal, this._rendezvous);
+        });
+    }
+
+    /**
+     *
+     * @private
+     */
+    private _utp_handshake(data: Message)
+    {
+        if(this._intervals.handshake)
+            clearInterval(this._intervals.handshake);
+
+        if(this._intervals.registration)
+            clearInterval(this._intervals.registration);
+
+        this._logger.verbose('Handshake request/response received. Starting holepunch!');
+
+        this._logger.profile('holepunch', 'Holepunch succeeded');
+        this._holepunch(data.id, Address.refresh(data.endpoint as any));
+    }
+
+    /**
+     * Method used to holepunch a packet through the NAT
+     * @param id {string} the peer id to connect to
+     * @param remote {Address} The remote address
+     * @private
+     */
+    private _holepunch(id: string, remote: Address)
+    {
+        this._remote = {id, endpoint: remote};
+
+        this._intervals.punch = setInterval(() =>
+        {
+            this._logger.debug('Holepunching on', this._remote);
+
+            let data = Buffer.from(JSON.stringify({type: MessageType.HOLEPUNCH}));
+
+            this._send(data, remote);
+        }, this._retry_interval);
     }
 
     // endregion
