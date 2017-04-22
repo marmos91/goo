@@ -89,7 +89,7 @@ export class Peer extends EventEmitter
             punch: null
         };
 
-        this._socket = dgram.createSocket('dgram');
+        this._socket = dgram.createSocket('udp4');
     }
 
     // region public methods
