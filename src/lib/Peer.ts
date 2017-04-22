@@ -1,11 +1,11 @@
+import * as dgram from 'dgram';
 import {EventEmitter} from 'events';
+import * as SPeer from 'simple-peer';
 import {logger, LoggerInstance} from 'winston-decorator';
+import * as wrtc from 'wrtc';
 import settings from '../settings';
 import Address from './Address';
-import * as dgram from 'dgram';
 import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Requests';
-import * as SPeer from 'simple-peer';
-import * as wrtc from 'wrtc';
 
 // region settings
 let ice_settings = {
@@ -96,22 +96,40 @@ export class Peer extends EventEmitter
 
     /**
      * Method that sends the handshake request to the rendezvous server
-     * @param peer_id {string}: The id of the peer to connect to.
+     * @param remote_id {string}: The id of the peer to connect to.
      */
-    public get_connection_with(peer_id: string)
+    public get_connection_with(remote_id: string)
     {
-        this._intervals.handshake = setInterval(() =>
+        this._logger.debug('Establishing WebRTC connection with peer', remote_id);
+
+        let data: HandshakeRequest = {
+            type: HandshakeRequestType.HOLEPUNCH,
+            peer_id: this._id,
+            remote_id
+        };
+
+        let buffered_data = Buffer.from(JSON.stringify(data));
+        this._send(buffered_data, this._rendezvous);
+
+        this._peer = new SPeer({initiator: true, wrtc, config: ice_settings, trickle: this._trickle});
+
+        this._peer.on('error', (error) => this.emit('error', error));
+        this._peer.on('connect', () => this.emit('connection', this._peer));
+
+        this._logger.debug('Retrieving ICE candidates...');
+        this._peer.on('signal', (ice_candidate) =>
         {
-            let data: HandshakeRequest = {
-                type: HandshakeRequestType.HOLEPUNCH,
-                remote_id: peer_id,
-                peer_id: this._id
+            let request: HandshakeRequest = {
+                type: HandshakeRequestType.SIGNALING,
+                peer_id: this._id,
+                signal: ice_candidate,
+                remote_id
             };
 
-            let buffered_data = Buffer.from(JSON.stringify(data));
-
-            this._send(buffered_data, this._rendezvous);
-        }, this._retry_interval);
+            this._logger.silly('Sending ice candidates...', ice_candidate);
+            let signal = Buffer.from(JSON.stringify(request));
+            this._send(signal, this._rendezvous);
+        });
     }
 
     // endregion
@@ -135,7 +153,7 @@ export class Peer extends EventEmitter
 
                 await this._init();
 
-                this._register();
+                await this._register();
                 return resolve();
             });
         });
@@ -170,21 +188,19 @@ export class Peer extends EventEmitter
      * Private method used to register the peer to the given rendezvous server.
      * @private
      */
-    private _register()
+    private _register(): Promise<any>
     {
-        this._intervals.registration = setInterval(() =>
+        return new Promise((resolve, reject) =>
         {
-            try
-            {
-                let request: HandshakeRequest = {type: HandshakeRequestType.REGISTRATION, peer_id: this._id};
-                let buffer_request = Buffer.from(JSON.stringify(request));
-                this._send(buffer_request, this._rendezvous);
-            }
-            catch(error)
-            {
-                this._logger.error(error);
-            }
-        }, this._retry_interval);
+            this._logger.debug('Registering...');
+
+            let request: HandshakeRequest = {type: HandshakeRequestType.REGISTRATION, peer_id: this._id};
+            let buffer_request = Buffer.from(JSON.stringify(request));
+            this._send(buffer_request, this._rendezvous);
+
+            this._logger.debug('Registered');
+            return resolve();
+        });
     }
 
     // endregion
@@ -202,27 +218,39 @@ export class Peer extends EventEmitter
         try
         {
             let data: Message = JSON.parse(message.toString());
-            this._logger.debug('New message received from', sender);
+            this._logger.silly('New message received from', sender);
 
             switch(data.type)
             {
                 case MessageType.HANDSHAKE:
                 {
-                    if(this._intervals.handshake)
-                        clearInterval(this._intervals.handshake);
+                    this._logger.verbose('Handshake request received. Starting holepunch!');
 
-                    if(this._intervals.registration)
-                        clearInterval(this._intervals.registration);
+                    this._peer = new SPeer({initiator: false, wrtc, config: ice_settings, trickle: this._trickle});
 
-                    this._logger.verbose('Handshake request/response received. Starting holepunch!');
+                    this._peer.on('error', (error) => this.emit('error', error));
+                    this._peer.on('connect', () => this.emit('connection', this._peer));
 
-                    this._logger.profile('holepunch', 'Holepunch succeeded');
-                    this._holepunch(data.id);
+                    this._logger.debug('Retrieving ICE candidates...');
+                    this._peer.on('signal', (ice_candidate) =>
+                    {
+                        let request: HandshakeRequest = {
+                            type: HandshakeRequestType.SIGNALING,
+                            peer_id: this._id,
+                            remote_id: data.id,
+                            signal: ice_candidate
+                        };
+
+                        this._logger.silly('Sending ice candidates...', ice_candidate);
+                        let signal = Buffer.from(JSON.stringify(request));
+                        this._send(signal, this._rendezvous);
+                    });
+
                     break;
                 }
                 case MessageType.SIGNAL:
                 {
-                    this._logger.debug('Received ice candidates');
+                    this._logger.silly('Received ice candidates', data.body);
                     this._peer.signal(data.body);
                     break;
                 }
@@ -236,41 +264,6 @@ export class Peer extends EventEmitter
         {
             this._logger.error(error);
         }
-    }
-
-    // endregion
-
-    // region holepunch
-
-    /**
-     * Method used to holepunch a packet through the NAT
-     * @param remote_id {string} the peer id to connect to
-     * @param remote {Address} The remote address
-     * @private
-     */
-    private _holepunch(remote_id: string)
-    {
-        this._peer = new SPeer({initiator: true, wrtc, config: ice_settings, trickle: this._trickle});
-
-        this._peer.on('error', (error) => this.emit('error', error));
-        this._peer.on('connect', () =>
-        {
-            console.log('Connection successfull');
-        });
-
-        this._peer.on('signal', (signal) =>
-        {
-            let request: HandshakeRequest = {
-                type: HandshakeRequestType.SIGNALING,
-                peer_id: this._id,
-                remote_id,
-                signal
-            };
-
-            this._logger.debug('Sending ice candidates...');
-            let data = Buffer.from(JSON.stringify(request));
-            this._send(data, this._rendezvous);
-        });
     }
 
     // endregion

@@ -167,25 +167,15 @@ export class Rendezvous
             {
                 this._logger.debug('Received an handshake request for an online peer');
 
-                let sender_response: Message = {
-                    type: MessageType.HANDSHAKE,
-                    id: request.remote_id,
-                    endpoint: this._peers[request.remote_id].endpoint
-                };
-
                 let receiver_response: Message = {
                     type: MessageType.HANDSHAKE,
                     id: request.peer_id,
                     endpoint: sender
                 };
 
-                let sender_message = JSON.stringify(sender_response);
                 let receiver_message = JSON.stringify(receiver_response);
 
-                this._logger.debug('Sending back handshake response', sender_response);
-
                 this._send(receiver_message, this._peers[request.remote_id].endpoint);
-                this._send(sender_message, sender);
             }
             else
                 this._logger.error('Peer', request.remote_id, 'not yet registered');
