@@ -3,7 +3,7 @@ import {EventEmitter} from 'events';
 import {logger, LoggerInstance} from 'winston-decorator';
 import settings from '../settings';
 import Address from './Address';
-import {HandshakeRequest, HandshakeRequestType, Message, MessageType, ProtocolType} from './Requests';
+import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Requests';
 
 // region interfaces
 
@@ -28,6 +28,8 @@ interface Peer
     id: string;
     endpoint: Address;
 }
+
+export enum ProtocolType {UTP, WEBRTC}
 
 // endregion
 
@@ -54,7 +56,7 @@ export class Rendezvous
     {
         this._port = options && options.port || 4321;
         this._host = options && options.host || null;
-        this._protocol = (typeof options !== 'undefined') ? options.protocol : ProtocolType.WEBRTC;
+        this._protocol = (options && typeof options.protocol !== 'undefined') ? options.protocol : ProtocolType.WEBRTC;
         this._peers = [];
 
         this._logger.debug('Protocol chosen:', ProtocolType[this._protocol]);

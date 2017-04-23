@@ -4,7 +4,7 @@ import {logger, LoggerInstance} from 'winston-decorator';
 import * as wrtc from 'wrtc';
 import settings from '../settings';
 import Address from './Address';
-import {HandshakeRequest, HandshakeRequestType, Message, MessageType, ProtocolType} from './Requests';
+import {HandshakeRequest, HandshakeRequestType, Message, MessageType} from './Requests';
 const utp = require('utp-native');
 
 // region settings
@@ -37,12 +37,14 @@ export interface RendezvousOptions
     trickle?: boolean;
 }
 
+export enum ProtocolType {UTP, WEBRTC}
+
 // endregion
 
 /**
  * Class representing a peer
  * @author Marco Moschettini
- * @version 0.0.1
+ * @version 0.2.0
  * @class
  */
 export class Peer extends EventEmitter
@@ -81,7 +83,7 @@ export class Peer extends EventEmitter
         this._id = id;
         this._rendezvous = options.rendezvous;
         this._initiator = options && options.initiator || false;
-        this._protocol = (typeof options !== 'undefined') ? options.protocol : ProtocolType.WEBRTC;
+        this._protocol = (options && typeof options.protocol !== 'undefined') ? options.protocol : ProtocolType.WEBRTC;
         this._host = options && options.host || null;
         this._port = options && options.port || null;
         this._retry_interval = options && options.retry || 1000;
@@ -126,13 +128,12 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
-     * @param remote_id
+     * Private method which setup an handshake interval
+     * @param remote_id {number} The peer to connect to
      * @private
      */
     private _utp_setup(remote_id: string)
     {
-        this._logger.debug('Setting up UTP');
         this._intervals.handshake = setInterval(() =>
         {
             let data: HandshakeRequest = {
@@ -148,13 +149,12 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
-     * @param remote_id
+     * Private method which setup a rtc handshake request
+     * @param remote_id {number} The peer to connect to
      * @private
      */
     private _rtc_setup(remote_id: string)
     {
-        this._logger.debug('Setting up WebRTC');
         let data: HandshakeRequest = {
             type: HandshakeRequestType.HOLEPUNCH,
             peer_id: this._id,
@@ -169,7 +169,7 @@ export class Peer extends EventEmitter
         this._peer.on('error', (error) => this.emit('error', error));
         this._peer.on('connect', () => this.emit('connection', this._peer));
 
-        this._logger.debug('Retrieving ICE candidates...');
+        this._logger.silly('Retrieving ICE candidates...');
         this._peer.on('signal', (ice_candidate) =>
         {
             let request: HandshakeRequest = {
@@ -202,7 +202,7 @@ export class Peer extends EventEmitter
                 // Save socket info
                 this._host = this._socket.address().address;
                 this._port = this._socket.address().port;
-                this._logger.debug(`UDP Socket bound on ${this._host}:${this._port}`);
+                this._logger.silly(`UDP Socket bound on ${this._host}:${this._port}`);
 
                 await this._init();
                 await this._register();
@@ -260,14 +260,15 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
-     * @returns {Promise<T>}
+     * Private method which registers the peer to the rendezvous server (UTP case)
+     * @returns {Promise<any>}
      * @private
      */
     private _utp_register(): Promise <any>
     {
         return new Promise((resolve, reject) =>
         {
+            this._logger.debug('Registering...');
             this._intervals.registration = setInterval(() =>
             {
                 try
@@ -284,12 +285,13 @@ export class Peer extends EventEmitter
                     this._logger.error(error);
                 }
             }, this._retry_interval);
+            this._logger.debug('Registered');
         });
     }
 
     /**
-     *
-     * @returns {Promise<T>}
+     * Private method which registers the peer to the rendezvous server (RTC case)
+     * @returns {Promise<any>}
      * @private
      */
     private _rtc_register(): Promise <any>
@@ -418,7 +420,8 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
+     * Private method which handles the RTC handshake procedure.
+     * @param data {Message} The message to handle
      * @private
      */
     private _rtc_handshake(data: Message)
@@ -447,7 +450,8 @@ export class Peer extends EventEmitter
     }
 
     /**
-     *
+     * Private method which handles the UTP handshake procedure.
+     * @param data {Message}: The message to handle
      * @private
      */
     private _utp_handshake(data: Message)

@@ -9,6 +9,7 @@
     "no-internal-module": true,
     "eofline": false,
     "ordered-imports": false,
+    "no-string-literal": false,
     "trailing-comma": false,
     "interface-name": false,
     "member-ordering": false,

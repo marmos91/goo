@@ -3,10 +3,13 @@ import {RTCIceCandidate} from 'wrtc';
 
 export enum HandshakeRequestType {REGISTRATION = 0, HOLEPUNCH, SIGNALING}
 export enum MessageType {REGISTRATION = 0, HOLEPUNCH, PAYLOAD, HANDSHAKE, SIGNAL, ACK}
-export enum ProtocolType {UTP, WEBRTC}
 
 /**
  * Interface representing an Handshake request (sent by the peer to the rendezvous server)
+ * @member type {HandshakeRequestType} The type of the request
+ * @member peer_id {number}: (optional) The sender id
+ * @member remote_id {number}: (optional) The peer to connect to
+ * @member signal {RTCIceCandidate}: (optional) The ice candidate object to be sent to the remote endpoint
  */
 export interface HandshakeRequest
 {
