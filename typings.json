@@ -2,5 +2,8 @@
   "name": "goo",
   "globalDependencies": {
     "node": "registry:dt/node#7.0.0+20170322231424"
+  },
+  "dependencies": {
+    "wrtc": "file:custom-typings/wrtc/typings.json"
   }
 }

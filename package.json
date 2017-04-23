@@ -26,7 +26,15 @@
     "url": "https://github.com/marmos91/goo/issues"
   },
   "homepage": "https://github.com/marmos91/goo#readme",
+  "dependencies": {
+    "@types/minimist": "^1.2.0",
+    "minimist": "^1.2.0",
+    "simple-peer": "^8.1.0",
+    "winston-decorator": "0.0.3",
+    "wrtc": "0.0.61"
+  },
   "devDependencies": {
+    "@types/simple-peer": "^6.1.1",
     "@types/node": "^7.0.12"
   }
 }
