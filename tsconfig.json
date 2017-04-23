@@ -4,6 +4,7 @@
     "outDir": "dist/",
     "target": "es6",
     "declaration": true,
+    "experimentalDecorators": true,
     "sourceMap": true,
     "typeRoots": ["./typings/globals", "./typings/modules"]
   },
