@@ -4,6 +4,9 @@
     "node": "registry:dt/node#7.0.0+20170322231424"
   },
   "dependencies": {
-    "wrtc": "file:custom-typings/wrtc/typings.json"
+    "wrtc": "file:custom-typings/wrtc/typings.json",
+    "nat-pmp": "file:custom-typings/nat-pmp/typings.json",
+    "netroute": "file:custom-typings/netroute/typings.json",
+    "nat-upnp": "file:custom-typings/nat-upnp/typings.json"
   }
 }

@@ -26,3 +26,25 @@ import {Peer} from './lib/Peer';
 import {Rendezvous} from './lib/Rendezvous';
 
 export {Peer, Rendezvous};
+
+import * as pmp from 'nat-pmp';
+import * as netroute from 'netroute';
+import * as upnp from 'nat-upnp';
+
+let gateway = netroute.getGateway();
+console.log('Gateway address:', gateway);
+let client = pmp.connect(gateway);
+
+client.externalIp(function (err, info)
+{
+    if (err) throw err;
+    console.log('Current external IP address: %s', info.ip.join('.'));
+});
+
+console.log('Mapping port private port 22 to external port 2222...');
+client.portMapping({ private: 22, public: 2222, type: 'udp' }, function (err, info)
+{
+    if (err) throw err;
+    console.log(info.resultMessage);
+    client.close();
+});

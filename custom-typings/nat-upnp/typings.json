@@ -1,0 +1,8 @@
+{
+  "name": "nat-upnp",
+  "version": "1.1.0",
+  "main": "nat-upnp.d.ts",
+  "globalDependencies": {
+    "node": "registry:env/node#6.0.0+20160622202520"
+  }
+}
